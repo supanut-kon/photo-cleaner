@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Keep - Photo Cleaner",
+    "slug": "keep-photo-cleaner",
+    "scheme": "keep-prototype",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/keep-icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.keep.photocleaner.prototype"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFE6A5",
+        "foregroundImage": "./assets/keep-icon.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.keep.photocleaner.prototype"
+    },
+    "web": {
+      "favicon": "./assets/keep-favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-sharing",
+      "expo-font",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Keep to help you review and clean up your photos.",
+          "savePhotosPermission": "Allow Keep to save your edited copies to Photos.",
+          "granularPermissions": ["photo"],
+          "preventAutomaticLimitedAccessAlert": true
+        }
+      ],
+      "expo-image"
+    ]
+  }
+}
