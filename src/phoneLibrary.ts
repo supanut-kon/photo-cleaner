@@ -43,6 +43,7 @@ export async function readPhotoPage(
       height: asset.height,
       bytes: 0,
       creationTime: asset.creationTime,
+      isScreenshot: asset.mediaSubtypes?.includes("screenshot"),
     })),
   };
 }

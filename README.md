@@ -2,7 +2,7 @@
 
 A React Native + Expo app for iOS and Android. Use your phone's photo library or the nine bundled AppProjects demo photos. Editing always creates a separate JPEG copy. Phone-photo removal requires review and a system confirmation; demo removal only changes local demo progress.
 
-The visual theme takes inspiration from [Kim Phuong’s retro brutalist app design](https://dribbble.com/shots/23724865-Job-search-app-Retro-brutalism-style): bundled Space Mono lettering, charcoal outlines, crisp offset shadows, purple actions and mint, pink, lime and yellow surfaces. Cleanup, library, previews, sheets and the photo editor share these styles.
+The interface uses a light liquid-glass treatment inspired by [Nainesh Selarka’s WhatsApp redesign](https://dribbble.com/shots/26560650-WhatsApp-Liquid-Glass-Redesign): floating translucent controls, pale blue layered backgrounds and rounded cards. The photo glow has been removed. Supported iOS 26+ devices use Apple’s native Liquid Glass through Expo GlassEffect; Android, web and older iPhones use a light backdrop-blur fallback. Headers and titles retain bundled [Geist Pixel Square](https://github.com/vercel/geist-font); supporting text uses system fonts. The included font license is `assets/fonts/OFL.txt`.
 
 ## Try it on a phone
 
@@ -54,3 +54,7 @@ See `VALIDATION.md` for completed checks and remaining device verification.
 Phone-library access, limited permissions, album/month selection, edited copies and confirmed deletion are implemented. The next step is physical-device verification on iOS and Android, followed by signed beta builds. No backend or photo upload is used.
 
 Photo sizes are read from local originals in the background. Cloud-only originals may have an unknown size until downloaded. Queue totals distinguish known sizes from incomplete totals.
+
+## Native glass library
+
+Custom builds can use `@sbaiahmed1/react-native-blur` 6.0.2 through `LiquidGlassView`. EAS profiles enable it; Expo Go safely keeps the built-in fallback. The browser uses the library’s web implementation. See [native glass testing](GLASS_TESTING.md) for the development-build and device requirements.

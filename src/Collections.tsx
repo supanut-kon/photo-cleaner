@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles, type Palette } from "./ui";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppState,
@@ -14,8 +15,8 @@ import * as MediaLibrary from "expo-media-library/legacy";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { photos as demoPhotos, type Photo } from "./photos";
 import { readPhotoPage, readPhotoSize, type CollectionSelection } from "./phoneLibrary";
-import { loadPhotoSizes } from "./photoSizes";
-import { Button, colors, IconButton, Pill, themedStyles } from "./ui";
+import { loadPhotoSizeBatch } from "./photoSizes";
+import { Button, Backdrop, Glass, IconButton, Pill, themedStyles } from "./ui";
 
 const SELECTION_KEY = "keep.collection.v1";
 export function useCollection() {
@@ -38,8 +39,11 @@ export function useCollection() {
   const sizeGeneration = useRef(0);
 
   const hydrateSizes = useCallback((pagePhotos: Photo[], token: number) => {
-    void loadPhotoSizes(pagePhotos, readPhotoSize, (id, bytes) => {
-      setPhotos((old) => old.map((photo) => photo.id === id ? { ...photo, bytes } : photo));
+    void loadPhotoSizeBatch(pagePhotos, readPhotoSize, (sizes) => {
+      setPhotos((old) => old.map((photo) => {
+        const bytes = sizes.get(photo.id);
+        return bytes !== undefined && bytes !== photo.bytes ? { ...photo, bytes } : photo;
+      }));
     }, () => live.current && sizeGeneration.current === token);
   }, []);
 
@@ -212,6 +216,8 @@ export function useCollection() {
 export type Collection = ReturnType<typeof useCollection>;
 
 export function CollectionPicker({ library }: { library: Collection }) {
+  const { colors } = useTheme();
+  const s = useThemedStyles(createStyles);
   const [month, setMonth] = useState("");
   return (
     <Modal
@@ -221,7 +227,9 @@ export function CollectionPicker({ library }: { library: Collection }) {
     >
       <SafeAreaProvider>
         <SafeAreaView style={s.screen}>
+          <Backdrop />
           <View style={s.header}>
+        <Glass intensity={25} />
             <Text style={s.title}>Hello, keeper.</Text>
             <IconButton
               icon="close"
@@ -243,7 +251,8 @@ export function CollectionPicker({ library }: { library: Collection }) {
               deletion.
             </Text>
             <View style={s.note}>
-              <Text style={s.copy}>
+        <Glass intensity={25} />
+              <Text style={[s.copy, { color: colors.ink }]}>
                 Edits create a new JPEG in Photos. Originals stay unchanged.
                 Photos are never uploaded to a server.
               </Text>
@@ -298,6 +307,8 @@ export function CollectionPicker({ library }: { library: Collection }) {
                 <TextInput
                   accessibilityLabel="Month in YYYY-MM format"
                   placeholder="Month, e.g. 2026-10"
+                  placeholderTextColor={colors.muted}
+                  selectionColor={colors.accent}
                   value={month}
                   onChangeText={setMonth}
                   style={s.input}
@@ -356,7 +367,7 @@ export function CollectionPicker({ library }: { library: Collection }) {
     </Modal>
   );
 }
-const s = themedStyles({
+const createStyles = (colors: Palette) => themedStyles({
   screen: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -365,12 +376,13 @@ const s = themedStyles({
     alignSelf: "center",
   },
   header: {
+    overflow: "hidden",
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 2,
-    borderColor: colors.ink,
+    borderBottomWidth: 1,
+    borderColor: colors.line,
     backgroundColor: colors.yellow,
   },
   title: { fontSize: 19, fontWeight: "700", color: colors.ink },
@@ -379,25 +391,27 @@ const s = themedStyles({
     fontSize: 27,
     lineHeight: 33,
     fontWeight: "700",
-    color: colors.ink,
+    color: colors.ambientInk,
   },
-  copy: { fontSize: 12, lineHeight: 22, color: colors.ink },
+  copy: { fontSize: 12, lineHeight: 22, color: colors.ambientInk },
   note: {
+    overflow: "hidden",
     padding: 15,
     backgroundColor: colors.mint,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 18,
   },
   input: {
+    backgroundColor: colors.paper,
     minHeight: 52,
     padding: 12,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 18,
     fontSize: 13,
     color: colors.ink,
   },
-  label: { fontSize: 11, fontWeight: "700", color: colors.ink },
+  label: { fontSize: 11, fontWeight: "700", color: colors.ambientInk },
   error: { fontSize: 12, lineHeight: 20, color: colors.coral },
 });

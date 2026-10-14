@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { localPhotoBytes, loadPhotoSizes, summarizePhotoSizes } from "../src/photoSizes.ts";
+import { localPhotoBytes, loadPhotoSizes, loadPhotoSizeBatch, summarizePhotoSizes } from "../src/photoSizes.ts";
 
 test("iPhone Photos references use their resolved local file for byte size", () => {
   const calls = [];
@@ -50,4 +50,38 @@ test("switching albums prevents in-flight size results from updating the new col
 test("queue totals track unknown sizes instead of treating a partial sum as complete", () => {
   assert.deepEqual(summarizePhotoSizes([{bytes: 1200}, {bytes: 0}, {bytes: 800}]), {bytes: 2000, unknown: 1});
   assert.deepEqual(summarizePhotoSizes([{bytes: 0}, {bytes: NaN}]), {bytes: 0, unknown: 2});
+});
+
+test("a page publishes sizes once after all lookups, including partial failures", async () => {
+  const photos = Array.from({ length: 40 }, (_, i) => ({ id: String(i), assetId: String(i), bytes: 0 }));
+  const batches = [];
+  let completed = 0;
+  await loadPhotoSizeBatch(photos, async (photo) => {
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(batches.length, 0);
+    completed++;
+    if (photo.id === "3") throw Error("unavailable");
+    return photo.id === "4" ? 0 : 1200;
+  }, sizes => {
+    assert.equal(completed, 40);
+    batches.push(new Map(sizes));
+  }, () => true);
+  assert.equal(batches.length, 1);
+  assert.equal(batches[0].size, 38);
+  assert.equal(batches[0].get("39"), 1200);
+});
+
+test("switching albums discards an accumulated size batch before publication", async () => {
+  const photos = ["fast", "slow"].map(id => ({ id, assetId: id, bytes: 0 }));
+  let active = true;
+  let finish;
+  const batches = [];
+  const pending = loadPhotoSizeBatch(photos, photo => photo.id === "fast"
+    ? Promise.resolve(1000) : new Promise(resolve => { finish = resolve; }),
+  sizes => batches.push(sizes), () => active);
+  await new Promise(resolve => setImmediate(resolve));
+  active = false;
+  finish(2000);
+  await pending;
+  assert.deepEqual(batches, []);
 });

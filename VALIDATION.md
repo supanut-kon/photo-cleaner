@@ -1,5 +1,9 @@
 # Prototype validation
 
+October 13, 2026 (light theme revision): Removed all photo glow layers and changed the app to a light glass theme. Shared surfaces now use Expo GlassEffect on iPhones where both the native API and compiled Liquid Glass support are available; unsupported systems use light Expo Blur. Headers, menus, navigation, editor and chooser use pale translucent surfaces and system text with Geist Pixel titles. Native Liquid Glass requires iOS 26+ and still needs physical-device confirmation. Lint, TypeScript, 14 tests and iOS/Android/web exports pass; Expo Doctor passes all 21 checks.
+
+October 13, 2026: Reworked all app surfaces into a dark liquid-glass theme, with frosted controls, rounded panels, a warm lower-edge photo glow and bundled Geist Pixel Square headings. Supporting text uses system fonts. The photo backdrop supplies an explicit Android blur target; iOS/web use backdrop blur. Browser checks cover cleanup, library, editor, settings, the collection chooser and Keep/Remove/Undo at 390 × 844 and 375 × 667. Lint, TypeScript, all 14 tests, all 21 Expo Doctor checks and iOS/Android/web exports pass. Native blur still needs physical-device verification.
+
 Verified on October 11, 2026:
 
 - All nine bundled JPGs match the source files in AppProjects by SHA-256.
@@ -26,3 +30,5 @@ Phone media-library access, album/month selection, pagination, HEIC normalizatio
 The media-library runtime warns that Expo Go cannot provide full media-library access on Android. Use a development build to verify the complete Android library flow. The current Expo Go testing target is iPhone.
 
 The dependency audit reported upstream advisories in the Expo/React Native toolchain and transitive packages. Nonbreaking automatic fixes were applied; unresolved advisories remain and require review before production release. Breaking automatic downgrades were not applied.
+
+October 13, 2026 (article library integration): Added @sbaiahmed1/react-native-blur 6.0.2, shared LiquidGlassView adapters, Expo Go import protection, EAS profile configuration and a development launcher. iOS autolinking finds its podspec. All 16 tests, lint, TypeScript and all 21 Expo Doctor checks pass; iOS/Android/web JavaScript exports pass with the library flag enabled. The browser implementation renders without runtime errors. A signed native binary has not been built or tested; see GLASS_TESTING.md.

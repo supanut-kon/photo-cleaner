@@ -36,6 +36,18 @@ export async function loadPhotoSizes<T extends SizeTarget>(
   }));
 }
 
+// Publish one metadata update per page instead of repainting for every asset.
+export async function loadPhotoSizeBatch<T extends SizeTarget>(
+  photos: T[],
+  readSize: (photo: T) => Promise<number>,
+  onBatch: (sizes: ReadonlyMap<string, number>) => void,
+  isActive: () => boolean,
+) {
+  const sizes = new Map<string, number>();
+  await loadPhotoSizes(photos, readSize, (id, bytes) => sizes.set(id, bytes), isActive);
+  if (isActive() && sizes.size) onBatch(sizes);
+}
+
 export function summarizePhotoSizes(photos: { bytes: number }[]) {
   return photos.reduce<{ bytes: number; unknown: number }>((total, photo) => {
     if (Number.isFinite(photo.bytes) && photo.bytes > 0) total.bytes += photo.bytes;

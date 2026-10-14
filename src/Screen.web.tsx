@@ -1,8 +1,9 @@
 import React from "react";
-import { colors, fonts } from "./ui";
+import { useTheme, fonts } from "./ui";
 import { WithSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
 import { ActivityIndicator, View, Text } from "react-native";
 export default function MobilePreview() {
+  const { colors } = useTheme();
   return (
     <WithSkiaWeb
       getComponent={() => import("./AppContent")}

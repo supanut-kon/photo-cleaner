@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles, type Palette } from "./ui";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,9 +25,11 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { File, Paths } from "expo-file-system";
 import {
   Button,
-  colors,
-  hardShadow,
+  Backdrop,
+  Glass,
+  glassShadow,
   themedStyles,
+  fonts,
   Icon,
   IconButton,
   Pill,
@@ -88,6 +91,8 @@ export default function Editor({
   onClose: () => void;
   onSave: (edit: Edit) => void;
 }) {
+  const { colors } = useTheme();
+  const s = useThemedStyles(createStyles);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const width = Math.min(windowWidth, 480) - 40;
   const thumbnailWidth = (width - 32) / 5 - 4;
@@ -253,7 +258,9 @@ export default function Editor({
   }
   return (
     <SafeAreaView style={s.safe}>
+      <Backdrop />
       <View style={s.header}>
+        <Glass intensity={25} />
         <IconButton icon="close" label="Cancel editing" onPress={onClose} />
         <View style={{ alignItems: "center", gap: 4 }}>
           <Text style={s.title}>A little fine-tuning</Text>
@@ -290,7 +297,8 @@ export default function Editor({
             onPressOut={() => setBefore(false)}
             style={s.compare}
           >
-            <Icon name="layers-outline" color="white" size={15} />
+            <Glass intensity={25} />
+            <Icon name="layers-outline" color={colors.ink} size={15} />
             <Text style={s.compareText}>
               {before ? "Before" : "Hold for before"}
             </Text>
@@ -311,6 +319,7 @@ export default function Editor({
           <Pill text="NEW COPY" />
         </View>
         <View style={s.tabs}>
+        <Glass intensity={25} />
           {(["looks", "adjust", "crop"] as const).map((value) => (
             <Pressable
               key={value}
@@ -384,7 +393,8 @@ export default function Editor({
                     s.presetText,
                     preset === p.name && {
                       color: colors.accent,
-                      fontWeight: "700",
+                      fontFamily: fonts.bold,
+                      fontWeight: "normal",
                     },
                   ]}
                 >
@@ -459,6 +469,7 @@ export default function Editor({
         )}
       </ScrollView>
       <View style={s.footer}>
+        <Glass intensity={25} />
         <Text style={s.exportNote}>JPEG copy · up to 2048 px</Text>
         <Button
           label={busy ? "Working…" : "Save edited copy"}
@@ -470,7 +481,7 @@ export default function Editor({
     </SafeAreaView>
   );
 }
-const s = themedStyles({
+const createStyles = (colors: Palette) => themedStyles({
   safe: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -479,44 +490,46 @@ const s = themedStyles({
     alignSelf: "center",
   },
   header: {
+    overflow: "hidden",
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 2,
-    borderColor: colors.ink,
+    borderBottomWidth: 1,
+    borderColor: colors.line,
     marginBottom: 18,
     backgroundColor: colors.yellow,
     paddingVertical: 16,
   },
   title: { fontSize: 16, fontWeight: "700", color: colors.ink },
-  sub: { fontSize: 10, color: colors.ink },
+  sub: { fontSize: 12, color: colors.ink },
   body: { paddingHorizontal: 20, paddingBottom: 20, gap: 18 },
   preview: {
-    borderRadius: 8,
+    borderRadius: 28,
     overflow: "hidden",
     backgroundColor: colors.lavender,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2.5,
-    borderColor: colors.ink,
-    boxShadow: hardShadow,
+    borderWidth: 1,
+    borderColor: colors.line,
+    boxShadow: glassShadow,
   },
   compare: {
+    overflow: "hidden",
     position: "absolute",
     bottom: 14,
     alignSelf: "center",
-    backgroundColor: colors.ink,
-    borderRadius: 5,
+    backgroundColor: colors.paper,
+    borderRadius: 18,
     paddingHorizontal: 13,
     paddingVertical: 9,
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.paper,
+    borderColor: colors.line,
   },
-  compareText: { fontSize: 11, color: "white", fontWeight: "500" },
+  compareText: { fontSize: 13, color: colors.ink, fontWeight: "500" },
   busy: {
     position: "absolute",
     top: 0,
@@ -527,32 +540,33 @@ const s = themedStyles({
     justifyContent: "center",
   },
   copyNote: { flexDirection: "row", alignItems: "center", gap: 6 },
-  note: { color: colors.muted, fontSize: 11, flex: 1 },
+  note: { color: colors.ambientMuted, fontSize: 13, flex: 1 },
   tabs: {
+    overflow: "hidden",
     flexDirection: "row",
     backgroundColor: colors.paper,
-    borderRadius: 6,
+    borderRadius: 18,
     padding: 3,
-    borderWidth: 2,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   tab: { flex: 1, paddingVertical: 11, alignItems: "center", borderRadius: 3 },
   tabActive: { backgroundColor: colors.lavender },
-  tabText: { fontSize: 10, fontWeight: "600", color: colors.ink },
+  tabText: { fontSize: 12, fontWeight: "600", color: colors.ink },
   presets: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
   preset: { flex: 1, alignItems: "center", gap: 8 },
   swatch: {
     width: "100%",
     aspectRatio: 0.85,
-    borderRadius: 5,
+    borderRadius: 18,
     overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   swatchActive: {
     borderColor: colors.accent,
-    borderWidth: 3,
-    boxShadow: "2px 2px 0 #222222",
+    borderWidth: 2,
+    boxShadow: glassShadow,
   },
   swatchPhoto: { width: "100%", height: "100%" },
   swatchCheck: {
@@ -563,30 +577,31 @@ const s = themedStyles({
     borderRadius: 3,
     padding: 3,
   },
-  presetText: { fontSize: 10, color: colors.ink },
+  presetText: { fontSize: 12, color: colors.ambientInk },
   sliders: { gap: 12 },
   sliderLabel: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  adjustLabel: { fontSize: 11, color: colors.ink, flex: 5 },
+  adjustLabel: { fontSize: 13, color: colors.ambientInk, flex: 5 },
   cropTools: { gap: 10 },
   cropNote: {
-    color: colors.muted,
+    color: colors.ambientMuted,
     fontSize: 12,
     textAlign: "center",
     paddingTop: 8,
   },
   error: { color: colors.coral, fontSize: 12 },
   footer: {
+    overflow: "hidden",
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
     gap: 10,
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.yellow,
   },
-  exportNote: { fontSize: 10, color: colors.ink, textAlign: "center" },
+  exportNote: { fontSize: 12, color: colors.ink, textAlign: "center" },
 });

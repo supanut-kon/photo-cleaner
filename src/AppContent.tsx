@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles, type Palette } from "./ui";
 import React, {
   forwardRef,
   useCallback,
@@ -13,12 +14,14 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
+import { BlurTargetView } from "expo-blur";
 import { StatusBar } from "expo-status-bar";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -52,15 +55,20 @@ import {
 } from "./session";
 import {
   Button,
-  colors,
-  hardShadow,
+  Backdrop,
+  Glass,
+  glassShadow,
   themedStyles,
   Icon,
   IconButton,
   Pill,
-  type IconName,
 } from "./ui";
 import Editor from "./Editor";
+import SoftPhoto from "./SoftPhoto";
+import BottomNavigation from "./BottomNavigation";
+import LibraryGallery from "./LibraryGallery";
+import CleanupTools from "./CleanupTools";
+import { cleanupProgress, type CleanupFilter } from "./cleanup";
 import { downloadCopy } from "./download";
 import {
   CollectionPicker,
@@ -76,6 +84,7 @@ const photoSource = (photo: Photo, session: Session) =>
   session.edits[photo.id] ? { uri: session.edits[photo.id].uri } : photo.source;
 
 type SwipePhotoCardProps = {
+  blurTarget?: React.RefObject<View | null>;
   photos: Photo[];
   albumName: string;
   photo: Photo;
@@ -89,8 +98,7 @@ type SwipePhotoCardProps = {
 type SwipeCardHandle = { fly: (decision: Decision) => void };
 
 const SwipePhotoCard = forwardRef<SwipeCardHandle, SwipePhotoCardProps>(function SwipePhotoCard({
-  photos,
-  albumName,
+  blurTarget,
   photo,
   active,
   onMotion,
@@ -98,6 +106,10 @@ const SwipePhotoCard = forwardRef<SwipeCardHandle, SwipePhotoCardProps>(function
   onDecide,
   onEdit,
 }, ref) {
+  const { colors } = useTheme();
+  const s = useThemedStyles(createStyles);
+  const sizeLabel = session.edits[photo.id] ? "Edited copy" : formatBytes(photo.bytes);
+  const sizeParts = sizeLabel.match(/^(.*) (KB|MB)$/);
   const x = useSharedValue(0),
     y = useSharedValue(0),
     locked = useSharedValue(false);
@@ -179,30 +191,21 @@ const SwipePhotoCard = forwardRef<SwipeCardHandle, SwipePhotoCardProps>(function
       importantForAccessibility={active ? "auto" : "no-hide-descendants"}
       style={[s.photoCard, StyleSheet.absoluteFill, { zIndex: active ? 2 : 1 }, cardStyle]}
     >
-      <Image
-        source={photoSource(photo, session)}
-        cachePolicy="memory-disk"
-        transition={0}
-        style={s.cover}
-        contentFit="cover"
-        blurRadius={18}
-      />
-      <Image
-        source={photoSource(photo, session)}
-        cachePolicy="memory-disk"
-        transition={0}
-        style={[StyleSheet.absoluteFill, s.cover]}
-        contentFit="contain"
-      />
+      <BlurTargetView ref={blurTarget} style={StyleSheet.absoluteFill}>
+      <SoftPhoto source={photoSource(photo, session)}
+        width={session.edits[photo.id]?.width ?? photo.width}
+        height={session.edits[photo.id]?.height ?? photo.height} />
       <LinearGradient
-        colors={["transparent", "#14231AC0"]}
+        colors={["#080D1900", "#080D1926", "#080D199E"]}
+        locations={[0, 0.4, 1]}
         style={s.cardGradient}
       />
+      </BlurTargetView>
       <View style={s.cardTop}>
-        <View style={s.photoTag}>
-          <Icon name="images-outline" size={13} color="white" />
-          <Text numberOfLines={1} style={s.photoTagText}>
-            {albumName}
+        <View style={s.photoDetails}>
+          <Glass radius={14} blurTarget={blurTarget} intensity={30} />
+          <Text numberOfLines={1} style={s.photoSize}>
+            {sizeParts ? <>{sizeParts[1]}<Text style={s.photoUnit}> {sizeParts[2].toLowerCase()}</Text></> : sizeLabel}
           </Text>
         </View>
         <Pressable
@@ -211,7 +214,8 @@ const SwipePhotoCard = forwardRef<SwipeCardHandle, SwipePhotoCardProps>(function
           onPress={onEdit}
           style={s.editChip}
         >
-          <Icon name="options-outline" color="white" size={16} />
+          <Glass radius={18} blurTarget={blurTarget} intensity={30} />
+          <Icon name="options-outline" color={colors.ink} size={16} />
           <Text style={s.editChipText}>Edit</Text>
         </Pressable>
       </View>
@@ -221,19 +225,6 @@ const SwipePhotoCard = forwardRef<SwipeCardHandle, SwipePhotoCardProps>(function
       <Animated.View style={[s.stamp, s.trashStamp, trashStyle]}>
         <Text style={[s.stampText, { color: "#FFE1D3" }]}>REMOVE</Text>
       </Animated.View>
-      <View style={s.cardBottom}>
-        <View style={{ flex: 1, gap: 5 }}>
-          <Text style={s.photoLabel}>
-            Photo {String(photos.indexOf(photo) + 1).padStart(2, "0")}
-          </Text>
-          <Text style={s.photoMeta}>
-            {session.edits[photo.id]
-              ? `${session.edits[photo.id].width} × ${session.edits[photo.id].height} · Edited copy`
-              : `${photo.width} × ${photo.height} · ${formatBytes(photo.bytes)}`}
-          </Text>
-        </View>
-
-      </View>
     </Animated.View>
   </GestureDetector>
   );
@@ -262,7 +253,11 @@ function SwipeCard({
   onUndo: () => void;
   canUndo: boolean;
 }) {
+
+  const { colors } = useTheme();
+  const s = useThemedStyles(createStyles);
   const activeCard = useRef<SwipeCardHandle>(null);
+  const blurTarget = useRef<View>(null);
   const [moving, setMoving] = useState(false);
   return (
     <View>
@@ -276,6 +271,7 @@ function SwipeCard({
             albumName={albumName}
             photo={item}
             active={item.id === photo.id}
+            blurTarget={item.id === photo.id ? blurTarget : undefined}
             session={session}
             onMotion={setMoving}
             onDecide={onDecide}
@@ -291,12 +287,14 @@ function SwipeCard({
             s.actionCircle,
             s.trashCircle,
             pressed && {
-              transform: [{ translateX: 2 }, { translateY: 2 }],
+              transform: [{ scale: 0.96 }],
               boxShadow: "none",
             },
           ]}
         >
-          <Icon name="close-outline" size={34} color={colors.coral} />
+          <Glass radius={32} blurTarget={blurTarget} intensity={35} />
+          <Icon name="trash-outline" size={23} color={colors.coral} />
+          <Text style={[s.actionLabel, { color: colors.coral }]}>Remove</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -308,12 +306,14 @@ function SwipeCard({
             s.undoCircle,
             (!canUndo || moving) && { opacity: 0.35 },
             pressed && {
-              transform: [{ translateX: 2 }, { translateY: 2 }],
+              transform: [{ scale: 0.96 }],
               boxShadow: "none",
             },
           ]}
         >
-          <Icon name="arrow-undo-outline" color={colors.muted} size={21} />
+          <Glass radius={24} blurTarget={blurTarget} intensity={35} />
+          <Icon name="arrow-undo" color={colors.ink} size={20} />
+          <Text style={s.undoLabel}>Undo</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -323,12 +323,14 @@ function SwipeCard({
             s.actionCircle,
             s.keepCircle,
             pressed && {
-              transform: [{ translateX: 2 }, { translateY: 2 }],
+              transform: [{ scale: 0.96 }],
               boxShadow: "none",
             },
           ]}
         >
-          <Icon name="heart-outline" size={29} color={colors.accent} />
+          <Glass radius={32} blurTarget={blurTarget} intensity={35} />
+          <Icon name="checkmark" size={25} color={colors.accent} />
+          <Text style={[s.actionLabel, { color: colors.accent }]}>Keep</Text>
         </Pressable>
       </View>
       </View>
@@ -349,6 +351,8 @@ export default function AppContent() {
   );
 }
 function PhotoWorkspace({ library }: { library: Collection }) {
+  const { colors, dark, setDark } = useTheme();
+  const s = useThemedStyles(createStyles);
   const photos = library.photos;
   const phoneMode = library.selection.mode === "phone";
   const storageKey = phoneMode ? "keep.phone.session.v1" : STORAGE_KEY;
@@ -357,6 +361,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
     : "AppProjects";
   const [removing, setRemoving] = useState(false);
   const [gridPage, setGridPage] = useState(0);
+  const [cleanupFilter, setCleanupFilter] = useState<CleanupFilter>("all");
   const editorLock = useRef(false);
   const [session, setSession] = useState<Session>(emptySession),
     [ready, setReady] = useState(false);
@@ -379,10 +384,31 @@ function PhotoWorkspace({ library }: { library: Collection }) {
   }>();
   const tab: "clean" | "library" | "edits" =
     params.tab === "library" || params.tab === "edits" ? params.tab : "clean";
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const headerAnchor = useRef(0);
   const setTab = useCallback(
-    (value: "clean" | "library" | "edits") => router.setParams({ tab: value }),
+    (value: "clean" | "library" | "edits") => {
+      setHeaderHidden(false);
+      headerAnchor.current = 0;
+      router.setParams({ tab: value });
+    },
     [],
   );
+  const headerVisibility = useSharedValue(1);
+  const onPageScroll = useCallback((offset: number) => {
+    const next = Math.max(0, offset);
+    const delta = next - headerAnchor.current;
+    if (Math.abs(delta) < 18) return;
+    setHeaderHidden(delta > 0);
+    headerAnchor.current = next;
+  }, []);
+  useEffect(() => {
+    headerVisibility.set(withTiming(headerHidden ? 0 : 1, { duration: 200 }));
+  }, [headerHidden, headerVisibility]);
+  const titleMotion = useAnimatedStyle(() => ({
+    opacity: headerVisibility.get(),
+    transform: [{ translateY: (1 - headerVisibility.get()) * -24 }],
+  }));
   const sheet =
     params.panel === "queue" || params.panel === "settings"
       ? params.panel
@@ -392,6 +418,12 @@ function PhotoWorkspace({ library }: { library: Collection }) {
       router.setParams({ panel: value ?? "" }),
     [],
   );
+  useEffect(() => {
+    // Cleanup is mainly a swipe screen, so it also hides the title after a pause.
+    if (!ready || tab !== "clean" || sheet) return;
+    const timer = setTimeout(() => setHeaderHidden(true), 3000);
+    return () => clearTimeout(timer);
+  }, [ready, tab, sheet]);
   const [confirm, setConfirm] = useState(false);
   const [message, setMessage] = useState(""),
     [libraryFilter, setLibraryFilter] = useState<"all" | "kept" | "pending">(
@@ -434,7 +466,8 @@ function PhotoWorkspace({ library }: { library: Collection }) {
   const [reviewViewportHeight, setReviewViewportHeight] = useState(0);
   // Reserve space for progress and a glimpse of the next button.
   // Measuring the scroll viewport accounts for the header, tabs and phone safe areas.
-  const cardHeight = Math.max(160, (reviewViewportHeight || windowHeight - 190) - 98);
+  // Compact filter pills free 26 px above the photo; keep its bottom in place.
+  const cardHeight = Math.max(240, (reviewViewportHeight || windowHeight - 100) - 288);
   useEffect(() => {
     let active = true;
     writes.current
@@ -523,9 +556,8 @@ function PhotoWorkspace({ library }: { library: Collection }) {
     removing,
   ]);
 
-  const pending = photos.filter(
-    (p) => !session.decisions[p.id] && !session.removed.includes(p.id),
-  );
+  const cleanup = cleanupProgress(photos, cleanupFilter, session.decisions, session.removed);
+  const pending = cleanup.pending;
   const kept = photos.filter((p) => session.decisions[p.id] === "keep");
   const queued = photos.filter((p) => session.decisions[p.id] === "trash");
   const edited = allPhotos.filter((p) => !!session.edits[p.id]);
@@ -533,7 +565,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
   const queueSizeLabel = queueSizes.unknown && queueSizes.bytes > 0
     ? `${formatBytes(queueSizes.bytes)} known · ${queueSizes.unknown} sizes unavailable`
     : formatBytes(queueSizes.bytes);
-  const reviewed = photos.length - pending.length;
+  const reviewed = cleanup.reviewed;
   const visible =
     tab === "edits"
       ? edited
@@ -552,6 +584,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
   }
   function review(decision: Decision) {
     if (!current) return;
+    setHeaderHidden(true);
     setSession((value) => decide(value, current.id, decision));
     if (Platform.OS !== "web") void Haptics.selectionAsync().catch(() => {});
   }
@@ -626,16 +659,21 @@ function PhotoWorkspace({ library }: { library: Collection }) {
   return (
     <GestureHandlerRootView style={s.root}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        <StatusBar style={dark ? "light" : "dark"} />
         <SafeAreaView style={s.app}>
+          <Backdrop />
           {!ready ? (
             <View style={s.empty}>
               <ActivityIndicator color={colors.accent} />
               <Text style={s.bodyText}>Opening your photos…</Text>
             </View>
           ) : (
-            <>
-              <View style={s.header}>
+            <View style={{ flex: 1 }}>
+              <View style={{ height: headerHidden ? 58 : 94, overflow: "hidden" }}>
+              <Animated.View style={[s.header, titleMotion]}
+                pointerEvents={headerHidden ? "none" : "auto"}
+                accessibilityElementsHidden={headerHidden}
+                importantForAccessibility={headerHidden ? "no-hide-descendants" : "auto"}>
                 <View style={s.brand}>
                   <View style={s.brandMark}>
                     <Icon
@@ -658,18 +696,28 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                         : "DEMO ALBUM"
                     }
                   />
-                  <IconButton
-                    label="About and settings"
-                    icon="options-outline"
-                    onPress={() => setSheet("settings")}
-                  />
                 </View>
+              </Animated.View>
               </View>
+              <IconButton label="About and settings" icon="options-outline"
+                onPress={() => setSheet("settings")} style={s.floatingSettings} />
+              {tab === "library" ? (
+                <LibraryGallery photos={visible} session={session} filter={libraryFilter}
+                  onFilter={setLibraryFilter} keptCount={kept.length}
+                  pendingCount={photos.filter((photo) => !session.removed.includes(photo.id) && !session.decisions[photo.id]).length}
+                  queuedCount={queued.length} total={phoneMode ? library.total : photos.length}
+                  phoneMode={phoneMode} busy={library.busy} hasNext={library.hasNext}
+                  error={library.error} loadMore={library.loadMore} onOpen={setPreviewPhoto}
+                  onQueue={openQueue} onConnect={() => library.setPicker(true)} onScrollOffset={onPageScroll} />
+              ) : (
               <ScrollView
                 style={{ flex: 1 }}
                 onLayout={(event) => setReviewViewportHeight(event.nativeEvent.layout.height)}
                 contentContainerStyle={s.content}
                 showsVerticalScrollIndicator={false}
+                onScroll={({ nativeEvent }) => onPageScroll(Math.min(nativeEvent.contentOffset.y,
+                  Math.max(0, nativeEvent.contentSize.height - nativeEvent.layoutMeasurement.height)))}
+                scrollEventThrottle={32}
               >
                 {!phoneMode && tab !== "clean" && (
                   <View style={{ marginBottom: 22 }}>
@@ -685,24 +733,23 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                   <>
                     <View style={s.sectionLabel}>
                       <Text style={s.eyebrow}>
-                        {tab === "library" ? "YOUR LITTLE COLLECTION" : "A FRESH PERSPECTIVE"}
+                        A FRESH PERSPECTIVE
                       </Text>
                       <View style={s.smallDot} />
                     </View>
                     <Text style={s.heading}>
-                      {tab === "library" ? "Your photos." : "Made yours."}
+                      Made yours.
                     </Text>
                     <Text style={s.subtitle}>
-                      {tab === "library"
-                        ? `${photos.length} moments, ready for a second look.`
-                        : "Your edited copies, all in one place."}
+                      Your edited copies, all in one place.
                     </Text>
                   </>
                 )}
                 {tab === "clean" ? (
                   <>
                     <View style={s.sessionLine}>
-                      <View style={s.row}>
+                      <Pressable style={s.row} accessibilityRole="button" accessibilityLabel="Choose album or month"
+                        onPress={() => library.setPicker(true)}>
                         <Icon
                           name="folder-open-outline"
                           color={colors.accent}
@@ -710,24 +757,30 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                         />
                         <Text
                           numberOfLines={1}
-                          style={[s.albumName, { maxWidth: 150 }]}
+                          style={[s.albumName, { maxWidth: Math.min(150, windowWidth * 0.25) }]}
                         >
                           {albumName}
                         </Text>
-                        <Text style={s.albumCount}>{photos.length} photos</Text>
-                      </View>
+                        <Text style={s.albumCount}>{cleanup.matching.length} photos</Text>
+                      </Pressable>
                       <Text style={s.progressText}>
-                        {reviewed} / {photos.length} reviewed
+                        {reviewed} / {cleanup.matching.length} reviewed
                       </Text>
                     </View>
                     <View style={s.progressTrack}>
                       <View
                         style={[
                           s.progressFill,
-                          { width: `${(reviewed / photos.length) * 100}%` },
+                          { width: `${cleanup.matching.length ? (reviewed / cleanup.matching.length) * 100 : 0}%` },
                         ]}
                       />
                     </View>
+                    <CleanupTools selected={cleanupFilter} onSelect={setCleanupFilter}
+                      counts={Object.fromEntries((["all", "screenshots", "large"] as const).map((filter) =>
+                        [filter, cleanupProgress(photos, filter, session.decisions, session.removed).pending.length])) as Record<CleanupFilter, number>}
+                      savings={queueSizes.bytes ? `${queueSizes.unknown ? "At least " : ""}${formatBytes(queueSizes.bytes)}` : queued.length ? "Unknown size" : "0 KB"}
+                      unknown={photos.filter((photo) => !session.removed.includes(photo.id) && !photo.bytes).length}
+                      paged={library.hasNext} />
                     {current ? (
                       <SwipeCard
                         photos={photos}
@@ -750,11 +803,16 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                             size={38}
                           />
                         </View>
-                        <Text style={s.doneTitle}>A little lighter.</Text>
+                        <Text style={s.doneTitle}>{library.hasNext ? "Next batch?" : cleanupFilter !== "all" ? cleanup.matching.length ? "All caught up." : "No matches." : "A little lighter."}</Text>
                         <Text style={s.doneText}>
-                          Every photo has had its moment.{"\n"}You kept{" "}
-                          {kept.length} and queued {queued.length} for removal.
+                          {library.hasNext ? "No more matching photos in this batch. Load more to keep reviewing."
+                            : cleanupFilter !== "all" ? `No unreviewed ${cleanupFilter === "large" ? "photos of 1 MB or more" : "screenshots"} in this collection.`
+                            : `You kept ${kept.length} and queued ${queued.length} for removal.`}
                         </Text>
+                        {library.hasNext && <Button label={library.busy ? "Loading…" : "Load next 40 photos"}
+                          disabled={library.busy} onPress={library.loadMore} icon="add-outline" />}
+                        {cleanupFilter !== "all" && <Button label="Review all photos" secondary
+                          onPress={() => setCleanupFilter("all")} />}
                         <Button
                           label={
                             queued.length
@@ -774,12 +832,12 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                           }
                         />
                         <View style={s.row}>
-                          <Pressable
+                          {cleanupFilter === "all" && <Pressable
                             accessibilityRole="button"
                             onPress={restart}
                           >
                             <Text style={s.textLink}>Review again</Text>
-                          </Pressable>
+                          </Pressable>}
                           {session.history.length > 0 && (
                             <Pressable
                               accessibilityRole="button"
@@ -807,6 +865,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                       onPress={openQueue}
                       style={s.queueCard}
                     >
+                      <Glass radius={18} intensity={20} />
                       <View style={s.queueIcon}>
                         <Icon
                           name="trash-outline"
@@ -822,7 +881,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                         </Text>
                         <Text style={s.queueSub}>
                           {queued.length
-                            ? `${queueSizeLabel} · review before removing`
+                            ? `${queueSizeLabel} to clear · review first`
                             : "Nothing leaves until you review it."}
                         </Text>
                       </View>
@@ -835,40 +894,6 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                   </>
                 ) : (
                   <>
-                    {tab === "library" && (
-                      <View style={s.filters}>
-                        {(["all", "kept", "pending"] as const).map((value) => (
-                          <Pressable
-                            key={value}
-                            accessibilityRole="tab"
-                            accessibilityState={{
-                              selected: libraryFilter === value,
-                            }}
-                            onPress={() => {
-                              setGridPage(0);
-                              setLibraryFilter(value);
-                            }}
-                            style={[
-                              s.filter,
-                              libraryFilter === value && s.filterActive,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                s.filterText,
-                                libraryFilter === value && { color: "white" },
-                              ]}
-                            >
-                              {value === "all"
-                                ? "All photos"
-                                : value === "kept"
-                                  ? `Kept · ${kept.length}`
-                                  : `To review · ${pending.length}`}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    )}
                     {visible.length ? (
                       <View style={s.grid}>
                         {visible
@@ -965,23 +990,6 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                         />
                       </View>
                     )}
-                    {tab === "library" && (
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={openQueue}
-                        style={s.queueCard}
-                      >
-                        <Icon
-                          name="trash-outline"
-                          size={20}
-                          color={colors.coral}
-                        />
-                        <Text style={[s.queueTitle, { flex: 1 }]}>
-                          Review removal queue · {queued.length}
-                        </Text>
-                        <Icon name="chevron-forward" size={18} />
-                      </Pressable>
-                    )}
                   </>
                 )}
                 {tab !== "clean" && visible.length > 40 && (
@@ -1035,48 +1043,9 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                   <Text style={s.localText}>On your device. At your pace.</Text>
                 </View>
               </ScrollView>
-              <View style={s.nav}>
-                {[
-                  { value: "clean", icon: "albums-outline", label: "Clean up" },
-                  { value: "library", icon: "grid-outline", label: "Library" },
-                  {
-                    value: "edits",
-                    icon: "color-wand-outline",
-                    label: "Edits",
-                  },
-                ].map((item) => (
-                  <Pressable
-                    key={item.value}
-                    accessibilityRole="tab"
-                    accessibilityLabel={item.label}
-                    accessibilityState={{ selected: tab === item.value }}
-                    onPress={() => setTab(item.value as typeof tab)}
-                    style={s.navItem}
-                  >
-                    <View
-                      style={[s.navIcon, tab === item.value && s.navIconActive]}
-                    >
-                      <Icon
-                        name={item.icon as IconName}
-                        size={21}
-                        color={tab === item.value ? colors.paper : "#D9CDDF"}
-                      />
-                    </View>
-                    <Text
-                      style={[
-                        s.navLabel,
-                        tab === item.value && {
-                          color: colors.lavender,
-                          fontWeight: "700",
-                        },
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </>
+              )}
+              <BottomNavigation selected={tab} onSelect={setTab} />
+            </View>
           )}
           {!!message && (
             <Pressable
@@ -1084,7 +1053,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
               onPress={() => setMessage("")}
               style={s.toast}
             >
-              <Icon name="checkmark-circle-outline" color="white" size={18} />
+              <Icon name="checkmark-circle-outline" color={colors.accent} size={18} />
               <Text style={s.toastText}>{message}</Text>
             </Pressable>
           )}
@@ -1141,6 +1110,16 @@ function PhotoWorkspace({ library }: { library: Collection }) {
               </View>
               {sheet === "settings" ? (
                 <View style={s.sheetBody}>
+                  <View style={s.appearanceRow}>
+                    <Icon name={dark ? "moon-outline" : "sunny-outline"} color={colors.accent} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.appearanceTitle}>Dark mode</Text>
+                      <Text style={s.appearanceNote}>{dark ? "Dark appearance" : "Light appearance"}</Text>
+                    </View>
+                    <Switch value={dark} onValueChange={setDark} accessibilityLabel="Dark mode"
+                      trackColor={{ false: colors.line, true: colors.accent }}
+                      thumbColor={dark ? "#F1F5FC" : "#FFFFFF"} />
+                  </View>
                   <Pill text="WORKING PROTOTYPE" icon="sparkles-outline" />
                   <Text style={s.bodyText}>
                     {phoneMode
@@ -1148,6 +1127,7 @@ function PhotoWorkspace({ library }: { library: Collection }) {
                       : "Nine demo photos are bundled from AppProjects. Demo removal only changes this session."}
                   </Text>
                   <View style={s.infoBox}>
+                  <Glass radius={18} intensity={35} />
                     <Icon name="lock-closed-outline" color={colors.accent} />
                     <Text style={[s.bodyText, { flex: 1 }]}>
                       No account. No uploads. Your progress and edited copies
@@ -1393,8 +1373,8 @@ function PhotoWorkspace({ library }: { library: Collection }) {
   );
 }
 
-const s = themedStyles({
-  root: { flex: 1, backgroundColor: "#EAE6EF" },
+const createStyles = (colors: Palette) => themedStyles({
+  root: { flex: 1, backgroundColor: colors.bg },
   app: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -1402,42 +1382,46 @@ const s = themedStyles({
     maxWidth: 480,
     alignSelf: "center",
     overflow: "hidden",
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: colors.ink,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderColor: colors.line,
   },
   header: {
+    backgroundColor: colors.header,
+    overflow: "hidden",
     paddingHorizontal: 22,
+    paddingRight: 78,
     paddingTop: 13,
     paddingBottom: 17,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 2,
-    borderColor: colors.ink,
+    borderBottomWidth: 0,
+    borderColor: colors.line,
     marginBottom: 20,
   },
+  floatingSettings: { position: "absolute", top: 13, right: 22, zIndex: 20 },
   brand: { flexDirection: "row", alignItems: "center", gap: 7 },
   brandMark: {
     width: 37,
     height: 37,
     backgroundColor: colors.yellow,
-    borderRadius: 6,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.ink,
-    boxShadow: "2px 2px 0 #222222",
-    transform: [{ rotate: "-6deg" }],
+    borderWidth: 1,
+    borderColor: colors.line,
+    boxShadow: glassShadow,
+
   },
   wordmark: {
     fontSize: 29,
-    letterSpacing: -2,
+    letterSpacing: -1,
     color: colors.ink,
     fontWeight: "700",
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 9 },
-  content: { paddingHorizontal: 22, paddingBottom: 14 },
+  content: { paddingHorizontal: 22, paddingBottom: 110 },
   sectionLabel: {
     flexDirection: "row",
     gap: 8,
@@ -1456,18 +1440,18 @@ const s = themedStyles({
     borderRadius: 2,
     backgroundColor: colors.purple,
     borderWidth: 1,
-    borderColor: colors.ink,
+    borderColor: colors.line,
   },
   heading: {
     fontSize: 32,
     lineHeight: 36,
     letterSpacing: -1.5,
-    color: colors.ink,
+    color: colors.ambientInk,
     fontWeight: "700",
   },
   subtitle: {
     fontSize: 11,
-    color: colors.muted,
+    color: colors.ambientMuted,
     lineHeight: 18,
     marginTop: 8,
     marginBottom: 16,
@@ -1479,17 +1463,17 @@ const s = themedStyles({
     marginBottom: 9,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
-  albumName: { fontSize: 11, fontWeight: "600", color: colors.ink },
-  albumCount: { fontSize: 10, color: colors.muted },
-  progressText: { fontSize: 10, color: colors.ink },
+  albumName: { fontSize: 11, fontWeight: "600", color: colors.ambientInk },
+  albumCount: { fontSize: 12, color: colors.ambientMuted },
+  progressText: { fontSize: 12, color: colors.ambientInk, fontWeight: "600" },
   progressTrack: {
     height: 8,
     backgroundColor: colors.paper,
     borderRadius: 3,
     marginBottom: 19,
     overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   progressFill: {
     height: "100%",
@@ -1499,19 +1483,19 @@ const s = themedStyles({
   cardArea: { width: "100%", marginBottom: 7 },
   photoCard: {
     flex: 1,
-    borderRadius: 9,
+    borderRadius: 32,
     overflow: "hidden",
     backgroundColor: colors.lavender,
-    boxShadow: "4px 4px 0 #222222",
-    borderWidth: 2.5,
-    borderColor: colors.ink,
+    boxShadow: glassShadow,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   cover: { width: "100%", height: "100%" },
   cardGradient: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    height: "45%",
+    height: "34%",
   },
   cardTop: {
     position: "absolute",
@@ -1522,41 +1506,26 @@ const s = themedStyles({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  photoTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 5,
-    backgroundColor: colors.ink,
-    borderWidth: 1,
-    borderColor: colors.paper,
-  },
-  photoTagText: { color: "white", fontSize: 9 },
-  cardBottom: {
-    position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 100,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  photoLabel: { color: "white", fontSize: 17, fontWeight: "600" },
-  photoMeta: { color: "#FFFFFFB0", fontSize: 10 },
+  photoDetails: { maxWidth: "70%", paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: colors.line, boxShadow: glassShadow },
+  photoSize: { color: colors.ink, fontSize: 14, fontWeight: "700" },
+  photoUnit: { color: colors.ink, fontSize: 14, fontWeight: "400" },
   editChip: {
+    width: 64,
+    justifyContent: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: colors.accent,
-    borderRadius: 5,
-    paddingHorizontal: 13,
+    backgroundColor: colors.control,
+    overflow: "hidden",
+    borderRadius: 18,
+    paddingHorizontal: 8,
     paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: colors.paper,
-    boxShadow: "2px 2px 0 #222222",
+    borderWidth: 1,
+    borderColor: colors.line,
+    boxShadow: glassShadow,
   },
-  editChipText: { color: "white", fontSize: 11, fontWeight: "500" },
+  editChipText: { color: colors.ink, fontSize: 13, fontWeight: "600" },
   stamp: {
     position: "absolute",
     top: 80,
@@ -1586,56 +1555,66 @@ const s = themedStyles({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 25,
+    gap: 10,
+    paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 19,
   },
   actionCircle: {
-    width: 61,
-    height: 61,
-    borderRadius: 31,
+    overflow: "hidden",
+    flex: 1,
+    maxWidth: 96,
+    height: 64,
+    borderRadius: 32,
+    gap: 3,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.ink,
-    boxShadow: hardShadow,
+    borderWidth: 1,
+    borderColor: colors.line,
+    boxShadow: glassShadow,
   },
-  trashCircle: { backgroundColor: colors.peach, borderColor: colors.ink },
-  keepCircle: { backgroundColor: colors.lime, borderColor: colors.ink },
+  actionLabel: { fontSize: 13, fontWeight: "700" },
+  undoLabel: { fontSize: 11, color: colors.ink, fontWeight: "600" },
+  trashCircle: { backgroundColor: colors.trashControl, borderColor: colors.line },
+  keepCircle: { backgroundColor: colors.keepControl, borderColor: colors.line },
   undoCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    backgroundColor: "white",
+    overflow: "hidden",
+    width: 48,
+    height: 64,
+    borderRadius: 24,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.softControl,
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "2px 2px 0 #222222",
+    boxShadow: glassShadow,
   },
   queueCard: {
+    overflow: "hidden",
+    marginTop: 12,
     backgroundColor: colors.yellow,
-    borderRadius: 7,
+    borderRadius: 18,
     padding: 13,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    boxShadow: hardShadow,
+    borderWidth: 1,
+    borderColor: colors.line,
+    boxShadow: glassShadow,
   },
   queueIcon: {
     width: 36,
     height: 36,
     backgroundColor: colors.peach,
-    borderRadius: 5,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  queueTitle: { fontSize: 11, fontWeight: "600", color: colors.ink },
-  queueSub: { fontSize: 9, lineHeight: 15, color: colors.ink },
+  queueTitle: { fontSize: 14, fontWeight: "600", color: colors.ink },
+  queueSub: { fontSize: 12, lineHeight: 18, color: colors.muted },
   localNote: {
     flexDirection: "row",
     gap: 5,
@@ -1643,50 +1622,29 @@ const s = themedStyles({
     justifyContent: "center",
     paddingTop: 15,
   },
-  localText: { fontSize: 9, color: colors.muted },
-  nav: {
-    flexDirection: "row",
-    paddingTop: 10,
-    paddingBottom: 9,
-    borderTopWidth: 2,
-    borderColor: colors.line,
-    backgroundColor: colors.ink,
-  },
-  navItem: { flex: 1, alignItems: "center", gap: 4 },
-  navIcon: {
-    width: 51,
-    height: 31,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navIconActive: {
-    backgroundColor: colors.purple,
-    borderWidth: 1,
-    borderColor: colors.paper,
-  },
-  navLabel: { fontSize: 10, color: "#E6DEEE" },
+  localText: { fontSize: 11, color: colors.ambientMuted },
   doneCard: {
+    overflow: "hidden",
     backgroundColor: colors.mint,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 18,
     padding: 25,
     alignItems: "center",
     justifyContent: "center",
     gap: 17,
     marginBottom: 19,
-    boxShadow: hardShadow,
+    boxShadow: glassShadow,
   },
   doneIcon: {
     width: 74,
     height: 74,
-    borderRadius: 8,
+    borderRadius: 18,
     backgroundColor: colors.yellow,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   doneTitle: {
     fontSize: 22,
@@ -1702,7 +1660,7 @@ const s = themedStyles({
   },
   textLink: {
     fontSize: 11,
-    color: colors.ink,
+    color: colors.ambientInk,
     padding: 5,
     textDecorationLine: "underline",
   },
@@ -1710,27 +1668,27 @@ const s = themedStyles({
   filter: {
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 5,
+    borderRadius: 18,
     backgroundColor: colors.paper,
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   filterActive: {
-    backgroundColor: colors.accent,
-    boxShadow: "2px 2px 0 #222222",
+    backgroundColor: colors.selection,
+    boxShadow: glassShadow,
   },
   filterText: { fontSize: 10, fontWeight: "600", color: colors.ink },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
   gridCard: {
-    backgroundColor: "white",
-    borderRadius: 7,
+    backgroundColor: colors.paper,
+    borderRadius: 18,
     overflow: "hidden",
-    borderWidth: 2,
-    borderColor: colors.ink,
-    boxShadow: "2px 2px 0 #222222",
+    borderWidth: 1,
+    borderColor: colors.line,
+    boxShadow: glassShadow,
   },
   gridImage: { width: "100%" },
-  gridFooter: { padding: 11, gap: 4, backgroundColor: colors.yellow },
+  gridFooter: { padding: 13, gap: 5, backgroundColor: colors.paper },
   gridName: { color: colors.ink, fontSize: 11, fontWeight: "600" },
   gridMeta: { fontSize: 9, color: colors.muted },
   gridBadge: {
@@ -1738,10 +1696,10 @@ const s = themedStyles({
     top: 9,
     right: 9,
     backgroundColor: colors.mint,
-    borderRadius: 5,
+    borderRadius: 18,
     padding: 6,
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   galleryEmpty: {
     minHeight: 330,
@@ -1750,43 +1708,44 @@ const s = themedStyles({
     gap: 18,
   },
   toast: {
+    overflow: "hidden",
     position: "absolute",
     bottom: 90,
     left: 20,
     right: 20,
     flexDirection: "row",
     gap: 9,
-    backgroundColor: colors.ink,
-    borderRadius: 7,
+    backgroundColor: colors.paper,
+    borderRadius: 18,
     padding: 14,
     alignItems: "center",
-    boxShadow: hardShadow,
-    borderWidth: 2,
+    boxShadow: glassShadow,
+    borderWidth: 1,
     borderColor: colors.purple,
   },
-  toastText: { color: "white", fontSize: 11, lineHeight: 17, flex: 1 },
+  toastText: { color: colors.ink, fontSize: 11, lineHeight: 17, flex: 1 },
   modalBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
     alignItems: "center",
-    backgroundColor: "#22222290",
+    backgroundColor: "#000000B0",
   },
   sheet: {
     width: "100%",
     maxWidth: 480,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     backgroundColor: colors.bg,
     overflow: "hidden",
     paddingBottom: 15,
-    borderWidth: 2,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   sheetHandle: {
     width: 40,
-    height: 5,
-    borderRadius: 0,
-    backgroundColor: colors.ink,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.paper,
     alignSelf: "center",
     marginTop: 10,
     marginBottom: 18,
@@ -1805,17 +1764,22 @@ const s = themedStyles({
     letterSpacing: -0.7,
   },
   sheetSub: { color: colors.muted, fontSize: 11, marginTop: 7 },
+  appearanceRow: { flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 14, borderRadius: 18, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.line },
+  appearanceTitle: { fontSize: 14, fontWeight: "600", color: colors.ink },
+  appearanceNote: { fontSize: 10, color: colors.muted, marginTop: 4 },
   sheetBody: { paddingHorizontal: 22, paddingBottom: 16, gap: 15 },
   bodyText: { fontSize: 12, color: colors.muted, lineHeight: 21 },
   infoBox: {
+    overflow: "hidden",
     padding: 15,
-    borderRadius: 5,
+    borderRadius: 18,
     backgroundColor: colors.mint,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   queueRow: {
     flexDirection: "row",
@@ -1826,18 +1790,18 @@ const s = themedStyles({
   queueThumb: {
     width: 53,
     height: 66,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   restoreButton: {
     flexDirection: "row",
     gap: 5,
     backgroundColor: colors.lime,
     padding: 11,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: colors.ink,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   restoreText: { color: colors.ink, fontSize: 11, fontWeight: "600" },
   emptyQueue: { paddingVertical: 25, alignItems: "center", gap: 16 },
@@ -1858,8 +1822,8 @@ const s = themedStyles({
     alignItems: "center",
     gap: 12,
     padding: 20,
-    borderBottomWidth: 2,
-    borderColor: colors.ink,
+    borderBottomWidth: 1,
+    borderColor: colors.line,
     backgroundColor: colors.yellow,
   },
   fullImageContainer: {
@@ -1871,8 +1835,8 @@ const s = themedStyles({
   previewFooter: {
     padding: 20,
     gap: 10,
-    borderTopWidth: 2,
-    borderColor: colors.ink,
+    borderTopWidth: 1,
+    borderColor: colors.line,
   },
   filename: { fontSize: 12, color: colors.ink, fontWeight: "600" },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },

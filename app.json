@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFE6A5",
+        "backgroundColor": "#F4F6FA",
         "foregroundImage": "./assets/keep-icon.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -33,11 +33,15 @@
         {
           "photosPermission": "Allow Keep to help you review and clean up your photos.",
           "savePhotosPermission": "Allow Keep to save your edited copies to Photos.",
-          "granularPermissions": ["photo"],
+          "granularPermissions": [
+            "photo"
+          ],
           "preventAutomaticLimitedAccessAlert": true
         }
       ],
-      "expo-image"
-    ]
+      "expo-image",
+      "expo-system-ui"
+    ],
+    "backgroundColor": "#F4F6FA"
   }
 }

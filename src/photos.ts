@@ -3,6 +3,7 @@ export type Photo = {
   source: number | { uri: string };
   assetId?: string;
   creationTime?: number;
+  isScreenshot?: boolean;
   filename: string;
   bytes: number;
   width: number;

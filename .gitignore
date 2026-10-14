@@ -9,6 +9,7 @@ dist/
 dist-native/
 dist-web/
 dist-prototype/
+dist-theme/
 audit-report.json
 web-build/
 expo-env.d.ts

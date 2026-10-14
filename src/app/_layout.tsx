@@ -1,13 +1,31 @@
 import { Stack } from "expo-router";
+import { useFonts } from "expo-font";
 import {
-  useFonts,
-  SpaceMono_400Regular,
-  SpaceMono_700Bold,
-} from "@expo-google-fonts/space-mono";
+  WorkSans_400Regular,
+  WorkSans_500Medium,
+  WorkSans_600SemiBold,
+  WorkSans_700Bold,
+  WorkSans_800ExtraBold,
+} from "@expo-google-fonts/work-sans";
 import { ActivityIndicator, View } from "react-native";
-import { colors } from "../ui";
+import { ThemeProvider, useTheme } from "../theme";
+import { useEffect } from "react";
+import * as SystemUI from "expo-system-ui";
+
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ SpaceMono_400Regular, SpaceMono_700Bold });
+  return <ThemeProvider><ThemedLayout /></ThemeProvider>;
+}
+function ThemedLayout() {
+  const { colors } = useTheme();
+  useEffect(() => { void SystemUI.setBackgroundColorAsync(colors.bg); }, [colors.bg]);
+  const [loaded, error] = useFonts({
+    GeistPixel: require("../../assets/fonts/GeistPixel-Square.ttf"),
+    WorkSans_400Regular,
+    WorkSans_500Medium,
+    WorkSans_600SemiBold,
+    WorkSans_700Bold,
+    WorkSans_800ExtraBold,
+  });
   if (!loaded && !error)
     return (
       <View
