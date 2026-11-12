@@ -16,7 +16,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { photos as demoPhotos, type Photo } from "./photos";
 import { readPhotoPage, readPhotoSize, type CollectionSelection } from "./phoneLibrary";
 import { loadPhotoSizeBatch } from "./photoSizes";
-import { Button, Backdrop, Glass, IconButton, Pill, themedStyles } from "./ui";
+import { Button, Backdrop, IconButton, Pill, themedStyles } from "./ui";
 
 const SELECTION_KEY = "keep.collection.v1";
 export function useCollection() {
@@ -131,11 +131,6 @@ export function useCollection() {
       setBusy(false);
     }
   }
-  function updatePhoto(photo: Photo) {
-    setPhotos((old) =>
-      old.map((item) => (item.id === photo.id ? photo : item)),
-    );
-  }
   useEffect(() => {
     live.current = true;
     if (Platform.OS !== "web")
@@ -210,7 +205,6 @@ export function useCollection() {
     hasNext,
     total,
     generation,
-    updatePhoto,
   };
 }
 export type Collection = ReturnType<typeof useCollection>;
@@ -223,13 +217,14 @@ export function CollectionPicker({ library }: { library: Collection }) {
     <Modal
       visible={library.picker}
       animationType="slide"
-      onRequestClose={() => !library.busy && library.setPicker(false)}
+      onRequestClose={() => {
+        if (!library.busy) library.setPicker(false);
+      }}
     >
       <SafeAreaProvider>
         <SafeAreaView style={s.screen}>
           <Backdrop />
           <View style={s.header}>
-        <Glass intensity={25} />
             <Text style={s.title}>Hello, keeper.</Text>
             <IconButton
               icon="close"
@@ -251,9 +246,8 @@ export function CollectionPicker({ library }: { library: Collection }) {
               deletion.
             </Text>
             <View style={s.note}>
-        <Glass intensity={25} />
               <Text style={[s.copy, { color: colors.ink }]}>
-                Edits create a new JPEG in Photos. Originals stay unchanged.
+                Review photos by swiping, then confirm any removals.
                 Photos are never uploaded to a server.
               </Text>
             </View>
@@ -381,16 +375,16 @@ const createStyles = (colors: Palette) => themedStyles({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderColor: colors.line,
     backgroundColor: colors.yellow,
   },
-  title: { fontSize: 19, fontWeight: "700", color: colors.ink },
+  title: { fontSize: 19, fontWeight: "800", color: colors.ink },
   body: { padding: 22, gap: 18, paddingBottom: 40 },
   heading: {
     fontSize: 27,
     lineHeight: 33,
-    fontWeight: "700",
+    fontWeight: "800",
     color: colors.ambientInk,
   },
   copy: { fontSize: 12, lineHeight: 22, color: colors.ambientInk },
@@ -398,20 +392,20 @@ const createStyles = (colors: Palette) => themedStyles({
     overflow: "hidden",
     padding: 15,
     backgroundColor: colors.mint,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 4,
   },
   input: {
     backgroundColor: colors.paper,
     minHeight: 52,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 4,
     fontSize: 13,
     color: colors.ink,
   },
-  label: { fontSize: 11, fontWeight: "700", color: colors.ambientInk },
+  label: { fontSize: 11, fontWeight: "800", color: colors.ambientInk },
   error: { fontSize: 12, lineHeight: 20, color: colors.coral },
 });

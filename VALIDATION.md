@@ -1,4 +1,34 @@
+# Current theme
+
+The app now uses opaque neo-brutalist surfaces. Liquid-glass adapters, dependencies, build flags and the dedicated launcher have been removed. Glass-related entries below describe historical revisions.
+
 # Prototype validation
+
+## Single-screen cleanup — November 12, 2026
+
+- Removed Library, its full-preview modal and bottom navigation. Old `?tab=library` URLs open cleanup. Collections, filters, settings and the reviewed removal queue remain accessible from the main screen.
+- Larger preview with decision controls below the image. Removed navigation padding and the redundant demo connect button; the collection selector opens Connect Photos. Background extends through the safe areas; a masked Expo Blur fades the top edge. The bottom keeps home-indicator spacing without a navigation surface.
+- Undo returns a photo from its original swipe side, including from the completed state. Returning cards block overlapping decisions, and reduced motion skips the slide. Undo from another filter switches to All when needed and focuses the restored photo.
+- Added SDK 58-compatible `expo-blur`. Existing custom native builds need rebuilding to include it; compatible Expo Go bundles it. Android uses the SDK 31+ blur method with a translucent fallback on older versions.
+- ESLint, TypeScript and all 28 current unit tests pass. iOS/Android JavaScript exports pass; these do not validate native compilation.
+- Chromium checks at 390 × 844 and 375 × 667 cover Keep/Remove undo, final-photo undo, consecutive undo, restored progress after reload, reduced-motion undo and the legacy Library URL. No page errors occurred. Physical iPhone/Android blur, safe areas and touch behavior still need confirmation.
+
+
+## Current preflight — November 11, 2026
+
+The current product is photo cleanup and Library browsing. Editing, saved edited copies, crop/export and the Edits gallery have been removed. Historical entries below describe earlier builds and do not establish acceptance of the current app.
+
+- Updated phone testing instructions for both platforms and added `DEVICE_TEST_CHECKLIST.md` with expected outcomes, a per-device run record and failure-report fields.
+- Reviewed the existing development profile, native identifiers and Photos permission configuration. Account linking and signing instructions are in `BUILD_READINESS.md`.
+- Installed Expo-recommended SDK 57 patch updates using `npx expo install --fix`. Online `npx expo install --check` now passes.
+- ESLint and TypeScript pass; all 30 automated tests pass.
+- iOS and Android Hermes/JavaScript exports pass. These are not signed installers or native compilation checks.
+- CLI authentication reports **Not logged in**; resolved config has no EAS project ID. Cloud builds, signing, installation and physical-device acceptance remain pending.
+- npm reports 13 dependency advisories (9 moderate, 4 high). No forced audit fixes were applied; review remains necessary before release.
+- Expo Doctor 1.21.7 failed to start: its downloaded CLI could not resolve `@expo/env`. A rerun with project module resolution also exited before producing checks. Doctor is not passed for this revision; retry with a working CLI/runtime before cloud-build signoff.
+
+## Historical validation
+
 
 October 13, 2026 (light theme revision): Removed all photo glow layers and changed the app to a light glass theme. Shared surfaces now use Expo GlassEffect on iPhones where both the native API and compiled Liquid Glass support are available; unsupported systems use light Expo Blur. Headers, menus, navigation, editor and chooser use pale translucent surfaces and system text with Geist Pixel titles. Native Liquid Glass requires iOS 26+ and still needs physical-device confirmation. Lint, TypeScript, 14 tests and iOS/Android/web exports pass; Expo Doctor passes all 21 checks.
 
@@ -31,4 +61,4 @@ The media-library runtime warns that Expo Go cannot provide full media-library a
 
 The dependency audit reported upstream advisories in the Expo/React Native toolchain and transitive packages. Nonbreaking automatic fixes were applied; unresolved advisories remain and require review before production release. Breaking automatic downgrades were not applied.
 
-October 13, 2026 (article library integration): Added @sbaiahmed1/react-native-blur 6.0.2, shared LiquidGlassView adapters, Expo Go import protection, EAS profile configuration and a development launcher. iOS autolinking finds its podspec. All 16 tests, lint, TypeScript and all 21 Expo Doctor checks pass; iOS/Android/web JavaScript exports pass with the library flag enabled. The browser implementation renders without runtime errors. A signed native binary has not been built or tested; see GLASS_TESTING.md.
+October 13, 2026 (article library integration): Added @sbaiahmed1/react-native-blur 6.0.2, shared LiquidGlassView adapters, Expo Go import protection, EAS profile configuration and a development launcher. iOS autolinking finds its podspec. All 16 tests, lint, TypeScript and all 21 Expo Doctor checks pass; iOS/Android/web JavaScript exports pass with the library flag enabled. The browser implementation renders without runtime errors. A signed native binary has not been built or tested; see the historical glass integration notes above.

@@ -1,25 +1,35 @@
-# Test Keep on your iPhone
+# Test Swipy on iPhone and Android
 
-Run `npm start`, connect your iPhone to the same network as your computer, then scan the terminal QR code with the iPhone Camera. Tap the banner to open Expo Go. Allow local-network access if iOS asks.
+Use an installed **Swipy development build** for the complete test on each platform. Expo Go is only a smoke test: Android media-library access is restricted. The app has one cleanup screen with a collection chooser and removal queue; editing, edited copies and export are outside this build.
 
-This app uses Expo SDK 57. Update Expo Go if it reports an incompatible SDK. This is a development testing session, not a TestFlight install; no Apple signing account is needed for Expo Go.
+## Install a development build
 
-## First test
+Build setup and account prerequisites are in [BUILD_READINESS.md](BUILD_READINESS.md). Install the resulting Android APK or the iOS build on a registered iPhone using the Expo build page.
 
-1. Tap **Connect Photos**. For a small first test, give access to a few selected photos. You can change allowed photos later in the chooser, or in iPhone Settings for Expo Go.
-2. Choose **Recent photos**, an album, or enter a month as `YYYY-MM`.
-3. Swipe right to keep, left to queue, then try **Undo**. Load the next 40 when ready.
-4. Open **Edit**, try a look, a slider and a crop. Tap **Save edited copy**. Check that a new JPEG appears in Apple Photos and in the app's **Edits** tab, while the original is unchanged.
-5. Queue a disposable test photo, review it, and tap **Remove from Photos**. Cancel the iOS dialog first and verify the queue stays intact. Repeat and confirm if you want to test actual removal. On iPhone, recover removed photos through Apple Photos' **Recently Deleted**, not through the app's Undo button.
-6. Close and reopen the app. Check progress and saved copies. Test a HEIC/iCloud photo and limited access, then change photo access in Settings and return to the app.
+After installation, run from the repository:
 
-## Restart the server later
-
-```powershell
-cd photo-cleaner
-npm start
+```sh
+npm run dev -- --lan --port 8081
 ```
 
-The address printed on restart is authoritative; it can change if the computer joins a different network. Scan the new terminal QR code. If the phone cannot connect, check that both devices share the same network and Expo Go has local-network access.
+Connect the phone and computer to the same network. Open the installed Swipy app and connect to the server using the terminal QR code or development launcher. Allow local-network access if prompted. The terminal address is authoritative and may change between networks. Stop any existing server on port 8081 before starting this one. Restart the server after dependency updates; rebuild the app when native dependencies or native configuration change.
 
-Native Photos permissions, deletion dialogs and saving to Photos must be verified on your phone. Local checks cover TypeScript, lint, 14 automated tests, Expo Doctor, native bundle exports and the served iPhone development bundle. A signed TestFlight/Play beta can follow the device testing phase. Full Android media-library testing requires a development build because Expo Go restricts media-library access on Android.
+For an optional Expo Go smoke test, run `npm start` and scan its QR code with an Expo Go version compatible with SDK 58. Do not use that session to sign off complete Android Photos behavior.
+
+## First session
+
+1. Prepare a small album of disposable photos, with at least one screenshot. Include a local photo larger than 1 MB; test cloud-only photos separately.
+2. Open the photo chooser, tap **Connect Photos**, and grant selected-photo access where supported. Choose **Recent photos**, an album, or a month in `YYYY-MM` format.
+3. Swipe right to keep, left to queue, and try **Undo**. Try the Keep and Remove buttons too. Nothing should be deleted by a swipe.
+4. Test All, Screenshots and Large photos on the cleanup screen. Undo a Keep and a Remove: the photo should return from the side it left. Repeat with Reduce Motion enabled. Scroll to check the fading top blur and the absence of a bottom navigation bar.
+5. Queue one disposable photo and open the removal queue. Cancel the system deletion prompt first: both the original and queue must remain. Retry and confirm deletion; verify the selected photo disappears from Photos and the app while an unselected control photo remains.
+6. Force-close and reopen Swipy. Reconnect to the development server if necessary. Confirm decisions and queue are retained for the same collection. Switching to demo photos must not mix phone and demo decisions.
+
+Use [DEVICE_TEST_CHECKLIST.md](DEVICE_TEST_CHECKLIST.md) for the complete pass, expected results and failure report. App Undo cannot recover deleted originals; use the operating system's Recently Deleted/Trash recovery where available.
+
+## Troubleshooting
+
+- Connection failure: check the network, terminal address and local-network permission. Reopen the development launcher and scan the current QR code.
+- Missing native module: install a newly built Swipy development client; restarting Expo Go cannot add native code.
+- Photos access denied: reconnect Photos or change access in system Settings, then return and reconnect. Record any stale images or crash.
+- Unknown cloud-photo sizes: a partial total is expected; unknown sizes must not be represented as a complete zero-byte total.

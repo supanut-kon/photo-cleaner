@@ -19,16 +19,8 @@ test("confirmed removal only clears the reviewed snapshot", () => {
   assert.deepEqual(result.decisions, { "phone:b": "trash", "phone:c": "keep" });
 });
 
-test("phone progress survives paging and preserves the Photos copy ID", () => {
+test("phone progress survives paging", () => {
   const state = decide(emptySession(), "phone:outside-current-page", "keep");
-  state.edits["phone:deleted-original"] = {
-    uri: "file:///copy.jpg",
-    width: 2048,
-    height: 2048,
-    savedAt: "2026-10-11",
-    libraryAssetId: "saved-copy",
-    filename: "keep-copy.jpg",
-  };
   assert.deepEqual(restoreSession(JSON.stringify(state)), state);
 });
 
@@ -75,16 +67,9 @@ test("restoring rejects corrupt data, unknown assets and contradictory state", (
     decisions: { b: "keep" },
     removed: ["a"],
     history: ["b"],
-    edits: {},
   });
 });
-test("valid progress and saved copies survive a storage round trip", () => {
+test("valid progress survives a storage round trip", () => {
   const state = decide(emptySession(), "a", "keep");
-  state.edits.a = {
-    uri: "file:///copy.jpg",
-    width: 800,
-    height: 1200,
-    savedAt: "2026-10-11",
-  };
   assert.deepEqual(restoreSession(JSON.stringify(state), ["a"]), state);
 });

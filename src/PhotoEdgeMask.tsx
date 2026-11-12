@@ -1,8 +1,13 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import MaskedView from "@react-native-masked-view/masked-view";
+import { StyleSheet, View, type ViewProps } from "react-native";
+import NativeMaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import { type FeatherFrame } from "./photoFeather";
+
+// The library's class declaration still extends the removed NativeMethods type.
+const MaskedView = NativeMaskedView as unknown as React.ComponentType<
+  ViewProps & { maskElement: React.ReactElement }
+>;
 
 export default function PhotoEdgeMask({ frame, children }: { frame: FeatherFrame | null; children: React.ReactNode }) {
   if (!frame?.axis) return <View style={StyleSheet.absoluteFill}>{children}</View>;

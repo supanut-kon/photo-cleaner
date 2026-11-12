@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Keep - Photo Cleaner",
+    "name": "Swipy",
     "slug": "keep-photo-cleaner",
     "scheme": "keep-prototype",
     "version": "1.0.0",
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F4F6FA",
+        "backgroundColor": "#FFF8E8",
         "foregroundImage": "./assets/keep-icon.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -26,13 +26,12 @@
     "plugins": [
       "expo-router",
       "expo-asset",
-      "expo-sharing",
       "expo-font",
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow Keep to help you review and clean up your photos.",
-          "savePhotosPermission": "Allow Keep to save your edited copies to Photos.",
+          "photosPermission": "Allow Swipy to help you review and clean up your photos.",
+          "savePhotosPermission": "Allow Swipy to remove photos you confirm in the removal queue.",
           "granularPermissions": [
             "photo"
           ],
@@ -42,6 +41,6 @@
       "expo-image",
       "expo-system-ui"
     ],
-    "backgroundColor": "#F4F6FA"
+    "backgroundColor": "#FFF8E8"
   }
 }

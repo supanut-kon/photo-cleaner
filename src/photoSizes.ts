@@ -14,7 +14,7 @@ export function localPhotoBytes(
   }
 }
 
-// Keep metadata work bounded and independent of displaying or editing images.
+// Keep metadata work bounded and independent of displaying images.
 export async function loadPhotoSizes<T extends SizeTarget>(
   photos: T[],
   readSize: (photo: T) => Promise<number>,

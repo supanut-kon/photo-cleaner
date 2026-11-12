@@ -1,23 +1,13 @@
 export type Decision = "keep" | "trash";
-export type Edit = {
-  uri: string;
-  width: number;
-  height: number;
-  savedAt: string;
-  libraryAssetId?: string;
-  filename?: string;
-};
 export type Session = {
   decisions: Record<string, Decision>;
   history: string[];
   removed: string[];
-  edits: Record<string, Edit>;
 };
 export const emptySession = (): Session => ({
   decisions: {},
   history: [],
   removed: [],
-  edits: {},
 });
 export function decide(
   session: Session,
@@ -66,7 +56,6 @@ export function restoreSession(
       ...new Set<string>(
         [
           ...Object.keys(value.decisions ?? {}),
-          ...Object.keys(value.edits ?? {}),
           ...(Array.isArray(value.removed) ? value.removed : []),
           ...(Array.isArray(value.history) ? value.history : []),
         ].filter((id): id is string => typeof id === "string"),
@@ -89,18 +78,7 @@ export function restoreSession(
         (decision === "keep" || decision === "trash")
       )
         result.decisions[id] = decision;
-      const edit = value.edits?.[id];
-      if (
-        edit &&
-        typeof edit.uri === "string" &&
-        /^(file:|data:image\/|blob:)/.test(edit.uri) &&
-        Number.isFinite(edit.width) &&
-        edit.width > 0 &&
-        Number.isFinite(edit.height) &&
-        edit.height > 0 &&
-        typeof edit.savedAt === "string"
-      )
-        result.edits[id] = edit;
+
     }
     result.history = Array.isArray(value.history)
       ? [

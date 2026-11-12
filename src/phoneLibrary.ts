@@ -1,9 +1,7 @@
 import * as MediaLibrary from "expo-media-library/legacy";
 import { File } from "expo-file-system";
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { type Photo } from "./photos";
-import { type Edit } from "./session";
-import { monthBounds, editableFileUri } from "./collectionRules";
+import { monthBounds } from "./collectionRules";
 import { localPhotoBytes } from "./photoSizes";
 
 export type CollectionSelection = {
@@ -54,46 +52,6 @@ export async function readPhotoSize(photo: Photo): Promise<number> {
     shouldDownloadFromNetwork: false,
   });
   return localPhotoBytes(asset, (uri) => new File(uri).size);
-}
-
-export async function resolvePhoto(photo: Photo): Promise<Photo> {
-  if (!photo.assetId) return photo;
-  const asset = await MediaLibrary.getAssetInfoAsync(photo.assetId, {
-    shouldDownloadFromNetwork: true,
-  });
-  const localUri = editableFileUri(asset.localUri);
-  const bytes = localPhotoBytes(asset, (uri) => new File(uri).size) || photo.bytes;
-  // Normalize HEIC and orientation before Skia decodes the editor image.
-  const scale = Math.min(1, 2048 / Math.max(asset.width, asset.height));
-  const context = ImageManipulator.manipulate(localUri);
-  context.resize({
-    width: Math.max(1, Math.round(asset.width * scale)),
-    height: Math.max(1, Math.round(asset.height * scale)),
-  });
-  const rendered = await context.renderAsync();
-  const normalized = await rendered.saveAsync({
-    format: SaveFormat.JPEG,
-    compress: 1,
-  });
-  return {
-    ...photo,
-    source: { uri: normalized.uri },
-    width: asset.width,
-    height: asset.height,
-    bytes,
-  };
-}
-
-export async function saveCopyToPhotos(edit: Edit): Promise<Edit> {
-  const permission = await MediaLibrary.requestPermissionsAsync(true, [
-    "photo",
-  ]);
-  if (!permission.granted)
-    throw new Error(
-      "Allow saving to Photos to save this copy. Your original is unchanged.",
-    );
-  const asset = await MediaLibrary.createAssetAsync(edit.uri);
-  return { ...edit, libraryAssetId: asset.id };
 }
 
 export async function removePhonePhotos(photos: Photo[]) {

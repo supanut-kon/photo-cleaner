@@ -1,22 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { monthBounds, editableFileUri } from "../src/collectionRules.ts";
-
-test("editing rejects Photos references before invoking the file image manipulator", () => {
-  assert.throws(() =>
-    editableFileUri("ph://A24D42B1-C521-4510-81A1-0095E315CBCD/L0/001"),
-  );
-  assert.throws(() => editableFileUri(undefined));
-  assert.throws(() => editableFileUri("https://example.com/photo.jpg"));
-  assert.equal(
-    editableFileUri("file:///cache/photo.heic"),
-    "file:///cache/photo.heic",
-  );
-  assert.equal(
-    editableFileUri("content://media/external/images/42"),
-    "content://media/external/images/42",
-  );
-});
+import { monthBounds } from "../src/collectionRules.ts";
 
 test("month selection handles leap February and the December year boundary", () => {
   assert.deepEqual(monthBounds("2024-02"), {

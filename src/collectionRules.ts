@@ -8,12 +8,3 @@ export function monthBounds(month: string) {
     createdBefore: new Date(year, number, 1).getTime() - 1,
   };
 }
-
-export function editableFileUri(uri?: string) {
-  if (!uri || !/^(file|content):\/\//.test(uri)) {
-    throw new Error(
-      "This photo is not available as a local file yet. Check your connection and try again.",
-    );
-  }
-  return uri;
-}
